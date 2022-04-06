@@ -11,7 +11,28 @@ const connection = mysql.createConnection({
     database: 'logindb'
 })
 connection.connect();
-
+// 获取商品信息
+// 账号密码登录
+router.post('/getGoodsList', (req, res) => {
+    const user = req.body;
+    // 定义查询 sql
+    const sel_user_sql =  `select * from goods`;
+    connection.query(sel_user_sql, (err, results) => {
+        if (err) throw err;
+        if (!results) {
+            res.json({
+                status: '-1',
+                message: '查询错误'
+            })
+        } else {
+            res.json({
+                status: '0',
+                message: '登陆成功！',
+                results
+            })
+        }
+    })
+})
 // 账号密码登录
 router.post('/loginByUserName', (req, res) => {
     const user = req.body;

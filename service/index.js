@@ -1,5 +1,6 @@
 const express = require('express');
 const app = express();
+var path = require('path')
 const cors = require('cors');
 const router = require('./api/router.js');
 const memuRouter = require('./api/memuRouter.js');
@@ -21,11 +22,16 @@ const whiteList = [
     "/api/menu/getMenuList",
 ];
 
+app.get('/images/*', function (req, res, next) {
+    res.sendFile(path.join(__dirname, req.url));
+})
+
+
 app.use((req, res, next) => {
     if (!whiteList.includes(req.url)) {
-        token.verifyToken(req.headers.authorization).then(res => {
+        // token.verifyToken(req.headers.authorization).then(res => {
             next();
-        }).catch(err => res.status(401).send('invalid token'))
+        // }).catch(err => res.status(401).send('invalid token'))
     } else {
         next();
     }
