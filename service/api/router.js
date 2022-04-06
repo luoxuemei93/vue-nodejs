@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const mysql = require('mysql');
 const token = require('./token.js');
+// const connection = require('./mysqlConnection.js');
 
+const mysql = require('mysql');
 const connection = mysql.createConnection({
     host: 'localhost',
     user: 'root',
@@ -10,6 +11,36 @@ const connection = mysql.createConnection({
     database: 'logindb'
 })
 connection.connect();
+
+// 账号密码登录
+router.post('/loginByUserName', (req, res) => {
+    const user = req.body;
+    // 定义查询 sql
+    const sel_user_sql =  `select * from login where userName = '${user.userName}'`;
+    connection.query(sel_user_sql, (err, results) => {
+        if (err) throw err;
+        if (results[0] === undefined) {
+            res.json({
+                status: '-1',
+                message: '用户名错误，用户不存在！'
+            })
+        } else {
+            if (results[0].userName === user.userName && results[0].password === user.password) {
+                const userToken = token.createToken(user);
+                res.json({
+                    status: '0',
+                    message: '登陆成功！',
+                    token: userToken
+                })
+            } else {
+                res.json({
+                    status: '1',
+                    message: '密码错误！'
+                })
+            }
+        }
+    })
+})
 
 // 登录模块
 router.post('/login', (req, res) => {
