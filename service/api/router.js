@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const token = require('./token.js');
-// const connection = require('./mysqlConnection.js');
 
 const mysql = require('mysql');
 const connection = mysql.createConnection({
@@ -14,7 +13,6 @@ connection.connect();
 // 获取商品信息
 // 账号密码登录
 router.post('/getGoodsList', (req, res) => {
-    const user = req.body;
     // 定义查询 sql
     const sel_user_sql =  `select * from goods`;
     connection.query(sel_user_sql, (err, results) => {
@@ -33,11 +31,69 @@ router.post('/getGoodsList', (req, res) => {
         }
     })
 })
+// 加入购物车
+router.post('/addShopCar', (req, res) => {
+    const params = req.body;
+    const get_goods = `select * from shopcar where goodsId = '${params.goodsId}'`;
+    connection.query(get_goods, (err, results) => {
+        let sql = "";
+        if(results.length == 0) {   // 购物车没有该数据，则新增，否则仅修改购买数量
+            sql =  `INSERT INTO shopcar(goodsId, goodsName, goodsPrice, goodsUnit, goodsImgUrl, orderNum) 
+            values('${params.goodsId}','${params.goodsName}',${params.goodsPrice},'${params.goodsUnit}','${params.goodsImgUrl}',${params.orderNum});`;
+        } else {
+            const stockNum = results[0].orderNum; // 库存数据 
+            const newNum = stockNum * 1 + params.orderNum * 1
+            sql = `UPDATE shopcar set orderNum = ${newNum} WHERE goodsId= '${params.goodsId}'`
+        }
+        connection.query(sql, (err, results) => {
+            if (err) throw err;
+            if (!results) {
+                res.json({status: '-1'})
+            } else {
+                res.json({
+                    status: '0',
+                    message: '添加成功！',
+                    results
+                })
+            }
+        })
+    })
+})
+// 查询购物车数据
+router.post('/getShopCar', (req, res) => {
+    const reqBody = req.body;
+    // 定义查询 sql
+    const sel_user_sql =  `select * from shopcar`;
+    connection.query(sel_user_sql, (err, results) => {
+        if (err) throw err;
+        if (!results) {
+            res.json({status: '-1', message: '查询错误'})
+        } else {
+            res.json({status: '0',message: '查询成功',results})
+        }
+    })
+})
+// 移出购物车
+router.post('/removeShopCar', (req, res) => {
+    const reqBody = req.body;
+    // 定义查询 sql
+    const sel_user_sql =  `delete from shopcar where goodsId in (${reqBody.goodsIdStr})`;
+    connection.query(sel_user_sql, (err, results) => {
+        if (err) throw err;
+        if (!results) {
+            res.json({status: '-1', message: '查询错误'})
+        } else {
+            res.json({status: '0',message: '查询成功',results})
+        }
+    })
+})
+// 生成订单
+
 // 账号密码登录
 router.post('/loginByUserName', (req, res) => {
     const user = req.body;
     // 定义查询 sql
-    const sel_user_sql =  `select * from login where userName = '${user.userName}'`;
+    const sel_user_sql =  `select * from login where userName = '${user.userName}' and password ='${user.password}'`;
     connection.query(sel_user_sql, (err, results) => {
         if (err) throw err;
         if (results[0] === undefined) {
