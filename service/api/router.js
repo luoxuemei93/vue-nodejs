@@ -88,7 +88,40 @@ router.post('/removeShopCar', (req, res) => {
     })
 })
 // 生成订单
-
+router.post('/addOrder', (req, res) => {
+    const reqBody = req.body;
+    const sel_user_sql =  `select * from shopcar where goodsId in (${reqBody.goodsIdStr})`;
+    connection.query(sel_user_sql, (err, results) => {
+        if (err) throw err;
+        if (results[0] === undefined) {
+            res.json({status: '-1',message: '购物车查询不到该产品信息！'})
+        } else {
+            let addValue = "";
+            for(let index in results) {
+                const item = results[index];
+                let p = `(${reqBody.orderCode},'${item.goodsId}','${item.goodsName}',${item.goodsPrice},'${item.goodsUnit}','${item.goodsImgUrl}',${item.orderNum},'暂无')`
+                if(index == 0) {
+                    addValue = p;
+                } else {
+                    addValue+=`,${p}`;
+                }
+            }
+            const add_order = `INSERT INTO goodsorder(orderCode, goodsId, goodsName, goodsPrice, goodsUnit, goodsImgUrl, orderNum, orderUser) values ${addValue}`;
+            connection.query(add_order, (err, results) => {
+                if (err) throw err;
+                if (!results) {
+                    res.json({status: '-1'})
+                } else {
+                    res.json({
+                        status: '0',
+                        message: '添加成功！',
+                        results
+                    })
+                }
+            })
+        }
+    })
+})
 // 账号密码登录
 router.post('/loginByUserName', (req, res) => {
     const user = req.body;
