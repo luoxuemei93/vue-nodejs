@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const token = require('./token.js');
 const moment = require('moment');
-
+const async = require('async'); // 异步
 const mysql = require('mysql');
 const connection = mysql.createConnection({
     host: 'localhost',
@@ -12,7 +12,6 @@ const connection = mysql.createConnection({
 })
 connection.connect();
 // 获取商品信息
-// 账号密码登录
 router.post('/getGoodsList', (req, res) => {
     // 定义查询 sql
     const get_goods =  `select * from goods`;
@@ -26,12 +25,13 @@ router.post('/getGoodsList', (req, res) => {
         } else {
             res.json({
                 status: '0',
-                message: '登陆成功！',
+                message: '查询成功！',
                 results
             })
         }
     })
 })
+
 // 加入购物车
 router.post('/addShopCar', (req, res) => {
     const userName = req.headers.username
@@ -69,6 +69,7 @@ router.post('/addShopCar', (req, res) => {
         })
     })
 })
+
 // 查询购物车数据
 router.post('/getShopCar', (req, res) => {
     const reqBody = req.body;
@@ -84,6 +85,7 @@ router.post('/getShopCar', (req, res) => {
         }
     })
 })
+
 // 移出购物车
 router.post('/removeShopCar', (req, res) => {
     const reqBody = req.body;
@@ -99,12 +101,12 @@ router.post('/removeShopCar', (req, res) => {
         }
     })
 })
+
 // 生成订单
 router.post('/addOrder', (req, res) => {
     const reqBody = req.body;
     const userName = req.headers.username
     const orderDate = moment().format("YYYY-MM-DD HH:mm:ss");
-    console.log(`orderDate='${orderDate}'`);
     const add_order =  `select * from shopcar where goodsId in (${reqBody.goodsIdStr}) and userName = '${userName}'`;
     connection.query(add_order, (err, results) => {
         if (err) throw err;
@@ -137,6 +139,50 @@ router.post('/addOrder', (req, res) => {
         }
     })
 })
+// 查询详情
+const getDetail = (orderCode, callback) =>{
+    const get_order_detail = `SELECT * FROM goodsorder where orderCode = "${orderCode}"`;
+    connection.query(get_order_detail,  (cErr, cResults) => {
+        return callback(cResults);
+    })
+}
+// 查询订单详情
+router.post('/getOrder', (req, res) => {
+    const get_order_code = `select orderCode, orderDate, userName from goodsorder group by orderCode`;
+    connection.query(get_order_code,  (err, results) => {
+        if (err) throw err;
+        if(results && results.length > 0) {
+            let index = 0;
+            results.forEach((item) => {
+                getDetail(item.orderCode, cResults=>{
+                    index++
+                    item["children"] = cResults;
+                    if(index == results.length){
+                        res.json({
+                            status: '0',
+                            message: '查询成功！',
+                            results
+                        })
+                        return false;    
+                    }
+                    
+                })
+            });
+        } else if(results && results.length == 0) {
+            res.json({
+                status: '0',
+                message: '查询成功！',
+                results: []
+            })
+        } else {
+            res.json({
+                status: '-1',
+                message: '查询错误'
+            })
+        }
+    })
+})
+
 // 账号密码登录
 router.post('/loginByUserName', (req, res) => {
     const user = req.body;
