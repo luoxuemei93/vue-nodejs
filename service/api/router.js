@@ -4,13 +4,19 @@ const token = require('./token.js');
 const moment = require('moment');
 const async = require('async'); // 异步
 const mysql = require('mysql');
-const connection = mysql.createConnection({
+var mqMutil = require('mysql-queries');
+
+const options = {
     host: 'localhost',
     user: 'root',
     password: 'root',
     database: 'logindb'
-})
+}
+const connection = mysql.createConnection(options)
+
 connection.connect();
+mqMutil.init(options)
+
 // 获取商品信息
 router.post('/getGoodsList', (req, res) => {
     // 定义查询 sql
@@ -148,9 +154,17 @@ const getDetail = (orderCode, callback) =>{
 }
 // 查询订单详情
 router.post('/getOrder', (req, res) => {
-    const get_order_code = `select orderCode, orderDate, userName from goodsorder group by orderCode`;
-    connection.query(get_order_code,  (err, results) => {
+    const reqBody = req.body;
+    let get_order_code = `select orderCode, orderDate, userName from goodsorder group by orderCode limit ${(reqBody.pagenum-1)*reqBody.pagesize}, ${reqBody.pagesize} `;
+    let get_total = `select count(1) as total from (select orderCode from goodsorder group by orderCode) as tb`;
+    if(reqBody.orderCode) {
+        get_order_code = `select orderCode, orderDate, userName from goodsorder where orderCode='${reqBody.orderCode}' group by orderCode limit ${(reqBody.pagenum-1)*reqBody.pagesize}, ${reqBody.pagesize} `;
+        get_total = `select count(1) as total from (select orderCode from goodsorder where orderCode='${reqBody.orderCode}'  group by orderCode) as tb`;
+    }
+    mqMutil.queries([get_order_code, get_total],[],function(err, resultMap){
         if (err) throw err;
+        let results = resultMap[0]; // 获取分页查询结果
+        const orderTotal = resultMap[1][0].total || 0;  // 获取total
         if(results && results.length > 0) {
             let index = 0;
             results.forEach((item) => {
@@ -161,7 +175,11 @@ router.post('/getOrder', (req, res) => {
                         res.json({
                             status: '0',
                             message: '查询成功！',
-                            results
+                            total: orderTotal,
+                            data:{
+                                total:orderTotal,
+                                results
+                            }
                         })
                         return false;    
                     }
@@ -172,7 +190,11 @@ router.post('/getOrder', (req, res) => {
             res.json({
                 status: '0',
                 message: '查询成功！',
-                results: []
+                total: orderTotal,
+                data:{
+                    total:orderTotal,
+                    results: []
+                }
             })
         } else {
             res.json({
