@@ -20,8 +20,12 @@ mqMutil.init(options);
 // ====================商品模块====================
 // 获取商品信息
 router.post("/getGoodsList", (req, res) => {
+  const params = req.body;
   // 定义查询 sql
-  const get_goods = `select * from goods`;
+  let get_goods = `select * from goods where 1=1 `;
+  if(params.goodsCategory) {
+    get_goods += `and goodsCategory = ${params.goodsCategory}`
+  }
   connection.query(get_goods, (err, results) => {
     if (err) throw err;
     if (!results) {
